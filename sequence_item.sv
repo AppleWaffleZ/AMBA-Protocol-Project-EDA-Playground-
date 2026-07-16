@@ -1,10 +1,6 @@
-// ============================================================
-// sequence_item.sv
-// Depends on: nothing (besides uvm_pkg, included once in testbench.sv)
-// Must compile BEFORE: sequencer.sv, driver.sv, monitor.sv,
-//                       write_read_transaction_seq.sv, scoreboard.sv
-// ============================================================
-
+// ------------------------------------------------------------
+// Sequence item: one logical write or read transaction
+// ------------------------------------------------------------
 class axi4lite_seq_item extends uvm_sequence_item;
     `uvm_object_utils(axi4lite_seq_item)
 
@@ -17,7 +13,7 @@ class axi4lite_seq_item extends uvm_sequence_item;
         super.new(name);
     endfunction
 
-    constraint c_addr_range { addr inside {8'h00, 8'h04, 8'h08, 8'h0C}; }
+    //constraint c_addr_range { addr inside {8'h00, 8'h04, 8'h08, 8'h0C}; }
 
     function string convert2string();
         return $sformatf("%s addr=0x%0h data=0x%0h resp=%0d",

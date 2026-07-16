@@ -12,16 +12,14 @@ class write_read_transaction_seq extends uvm_sequence #(axi4lite_seq_item);
     endfunction
 
     task body();
-        bit [7:0] addrs[4] = '{8'h00, 8'h04, 8'h08, 8'h0C};
-        foreach (addrs[i]) begin
+        repeat (10) begin  // however many random transactions you want
             axi4lite_seq_item wr;
             axi4lite_seq_item rd;
 
             wr = axi4lite_seq_item::type_id::create("wr");
             start_item(wr);
-            wr.is_write = 1;
-            wr.addr     = addrs[i];
-            wr.data     = 32'hCAFE_0000 + i;
+            if (!wr.randomize() with { is_write == 1; })
+                `uvm_error(get_type_name(), "wr.randomize() failed")
             finish_item(wr);
             `uvm_info(get_type_name(),
                 $sformatf("WRITE addr=0x%0h data=0x%0h -> resp=%0d",
@@ -29,8 +27,8 @@ class write_read_transaction_seq extends uvm_sequence #(axi4lite_seq_item);
 
             rd = axi4lite_seq_item::type_id::create("rd");
             start_item(rd);
-            rd.is_write = 0;
-            rd.addr     = addrs[i];
+            if (!rd.randomize() with { is_write == 0; addr == wr.addr; })
+                `uvm_error(get_type_name(), "rd.randomize() failed")
             finish_item(rd);
             `uvm_info(get_type_name(),
                 $sformatf("READ  addr=0x%0h <- data=0x%0h resp=%0d",

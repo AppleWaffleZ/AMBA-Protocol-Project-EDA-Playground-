@@ -1,7 +1,5 @@
 // ============================================================
-// design.sv
 // Minimal AXI4-Lite slave: 4 x 32-bit memory-mapped registers
-// Paste this into the "Design" pane on EDA Playground.
 // ============================================================
 
 module axi4lite_slave #(
@@ -48,7 +46,7 @@ module axi4lite_slave #(
     logic [ADDR_WIDTH-1:0] awaddr_l, araddr_l;
     logic                  aw_hs, w_hs, ar_hs;
 
-    // ---------------- Write address handshake ----------------
+   // ---------------- Write address handshake ----------------
     assign AWREADY = !ARESETn ? 1'b0 : (!AWVALID ? 1'b0 : (BVALID ? 1'b0 : 1'b1));
     // simple: accept AWADDR when both AW and W arrive; latch on handshake
     always_ff @(posedge ACLK or negedge ARESETn) begin
@@ -80,8 +78,8 @@ module axi4lite_slave #(
         end
     end
 
-    // ---------------- Read address handshake -------------------
-    assign ARREADY = !ARESETn ? 1'b0 : !RVALID; // ready whenever not in reset and not holding stale read data
+// ---------------- Read address handshake -------------------
+    assign ARREADY = !ARESETn ? 1'b0 : !RVALID;
 
     always_ff @(posedge ACLK or negedge ARESETn) begin
         if (!ARESETn) araddr_l <= '0;
@@ -98,7 +96,17 @@ module axi4lite_slave #(
             if (ARADDR[ADDR_WIDTH-1:4] == '0) begin
                 RDATA <= regs[ARADDR[3:2]];
                 RRESP <= OKAY;
-            end else begin
+            end else begin 
+                // TEMP bug injection: corrupt reads from 0x04 and 0x0C only,
+                // Uncomment if want to see failure (to test whether our scoreboard working).
+            /*if (ARADDR[ADDR_WIDTH-1:4] == '0) begin
+                if (ARADDR[3:2] == 2'd1 || ARADDR[3:2] == 2'd3) begin
+                    RDATA <= regs[ARADDR[3:2]] ^ 32'h0000_0001;
+                end else begin
+                    RDATA <= regs[ARADDR[3:2]];
+                end
+                RRESP <= OKAY;
+            end else begin*/
                 RDATA <= '0;
                 RRESP <= SLVERR;
             end

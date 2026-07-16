@@ -11,12 +11,19 @@ class axi4lite_monitor extends uvm_monitor;
     uvm_analysis_port #(axi4lite_seq_item) ap;
 
     // Holds read addresses whose AR handshake has completed but whose
-    // R data hasn't arrived yet. AXI4-Lite only has one outstanding
-    // transaction at a time in this simple design, so this queue will
-    // normally hold at most one entry - but using a queue (rather than
-    // a single variable) means this monitor still works correctly if
-    // the DUT/driver are later extended to pipeline multiple reads.
+    // R data hasn't arrived yet.
     bit [7:0] ar_addr_q[$];
+
+    // Holds address+data for writes whose AW/W handshake has completed
+    // but whose B response hasn't arrived yet (BRESP always lands one
+    // cycle later - see design.sv). Without this, a write transaction
+    // would get published with resp defaulting to OKAY regardless of
+    // what the DUT actually returned.
+    typedef struct packed {
+        bit [7:0]  addr;
+        bit [31:0] data;
+    } aw_pend_t;
+    aw_pend_t aw_pend_q[$];
 
     function new(string name, uvm_component parent);
         super.new(name, parent);
@@ -33,13 +40,29 @@ class axi4lite_monitor extends uvm_monitor;
         forever begin
             @(posedge vif.ACLK);
 
-            // Write: address and data arrive together on this simple slave,
-            // so one beat is enough to publish a full write transaction.
+            // Write address+data phase: remember it, BRESP isn't back yet.
             if (vif.AWVALID && vif.AWREADY && vif.WVALID && vif.WREADY) begin
+                aw_pend_t p;
+                p.addr = vif.AWADDR;
+                p.data = vif.WDATA;
+                aw_pend_q.push_back(p);
+            end
+
+            // Write response phase: pair BRESP with the oldest pending
+            // write and publish the completed write transaction.
+            if (vif.BVALID && vif.BREADY) begin
                 axi4lite_seq_item tr = axi4lite_seq_item::type_id::create("tr");
                 tr.is_write = 1;
-                tr.addr     = vif.AWADDR;
-                tr.data     = vif.WDATA;
+                tr.resp     = vif.BRESP;
+                if (aw_pend_q.size() == 0) begin
+                    `uvm_warning("MON", "B beat seen with no pending AW/W - check AW/W/B sequencing")
+                    tr.addr = 8'h00;
+                    tr.data = 32'h0;
+                end else begin
+                    aw_pend_t p = aw_pend_q.pop_front();
+                    tr.addr = p.addr;
+                    tr.data = p.data;
+                end
                 ap.write(tr);
             end
 

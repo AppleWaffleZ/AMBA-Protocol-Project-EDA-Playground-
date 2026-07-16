@@ -1,34 +1,22 @@
 // ============================================================
 // testbench.sv
-// This is the file EDA Playground actually compiles first from
-// the Testbench pane. It pulls in every other tab via `include,
-// in dependency order, then defines the top module.
-//
-// IMPORTANT: adding a file as a tab in EDA Playground does NOT
-// automatically compile it - it only gets compiled if something
-// `includes it (or if it's added to the file list separately in
-// tool settings). The `include chain below is what makes the
-// split-file structure actually work.
+// Minimal UVM testbench skeleton for the AXI4-Lite slave.
+// Paste this into the "Testbench" pane on EDA Playground.
+// Set the UVM/OVM dropdown to a real UVM version (e.g. 1.2)
+// before running.
 // ============================================================
 
-import uvm_pkg::*;
-`include "uvm_macros.svh"
-
-`include "if.sv"                        // interface - no UVM dependency
-`include "sequence_item.sv"             // depends on: nothing
-`include "sequencer.sv"                 // depends on: sequence_item.sv
-`include "driver.sv"                    // depends on: if.sv, sequence_item.sv
-`include "monitor.sv"                   // depends on: if.sv, sequence_item.sv
-`include "write_read_transaction_seq.sv"// depends on: sequence_item.sv, sequencer.sv
-`include "agent.sv"                     // depends on: driver.sv, sequencer.sv, monitor.sv
-`include "scoreboard.sv"                // depends on: sequence_item.sv
-`include "env.sv"                       // depends on: agent.sv, scoreboard.sv
-`include "axi4lite_base_test.sv"        // depends on: env.sv, write_read_transaction_seq.sv
+`include "if.sv"
+`include "axi4lite_pkg.sv"    // pastes the package block in right here, before anything below
+`include "test_pkg.sv"        // needs axi4lite_pkg already defined - satisfied, since it's textually above
 
 // ------------------------------------------------------------
 // Top-level: clock/reset, DUT, interface binding, run_test
 // ------------------------------------------------------------
 module top;
+  	
+  	import uvm_pkg::*;	
+  
     logic clk;
     logic rst_n;
 
